@@ -17,35 +17,37 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 258 10% 10%;
 
-    --primary: 258 60% 60%;
+    --primary: 258 60% 55%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 258 30% 90%;
     --secondary-foreground: 258 10% 10%;
 
     --muted: 258 20% 95%;
-    --muted-foreground: 258 10% 45%;
+    --muted-foreground: 258 10% 40%;
 
-    --accent: 268 70% 65%;
+    --accent: 268 70% 60%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 258 20% 88%;
-    --input: 258 20% 88%;
-    --ring: 258 60% 60%;
+    --border: 258 20% 85%;
+    --input: 258 20% 90%;
+    --ring: 258 60% 55%;
 
     --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
     --info: 217 91% 60%;
 
     --radius: 1rem;
     
-    --gradient-primary: linear-gradient(135deg, hsl(258, 60%, 60%) 0%, hsl(268, 70%, 65%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(258, 60%, 55%) 0%, hsl(268, 70%, 60%) 100%);
     --gradient-bg: linear-gradient(135deg, hsl(258, 90%, 97%) 0%, hsl(217, 91%, 97%) 100%);
     
-    --glass-bg: hsla(0, 0%, 100%, 0.9);
+    --glass-bg: hsla(0, 0%, 100%, 0.85);
     --glass-border: hsla(258, 60%, 60%, 0.2);
     
     --shadow-lg: 0 10px 40px -10px hsla(258, 60%, 60%, 0.3);
@@ -70,38 +72,43 @@ All colors MUST be HSL.
 
   .dark {
     --background: 258 40% 8%;
-    --foreground: 258 10% 95%;
+    --foreground: 258 5% 95%;
 
-    --card: 258 30% 12%;
-    --card-foreground: 258 10% 95%;
+    --card: 258 30% 15%;
+    --card-foreground: 258 5% 95%;
 
-    --popover: 258 30% 12%;
-    --popover-foreground: 258 10% 95%;
+    --popover: 258 30% 15%;
+    --popover-foreground: 258 5% 95%;
 
     --primary: 258 70% 65%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 258 30% 18%;
-    --secondary-foreground: 258 10% 95%;
+    --secondary: 258 30% 20%;
+    --secondary-foreground: 258 5% 95%;
 
-    --muted: 258 30% 18%;
-    --muted-foreground: 258 10% 65%;
+    --muted: 258 30% 20%;
+    --muted-foreground: 258 10% 70%;
 
-    --accent: 268 80% 70%;
+    --accent: 268 80% 65%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 258 30% 20%;
+    --border: 258 30% 25%;
     --input: 258 30% 20%;
     --ring: 258 70% 65%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(268, 60%, 30%) 0%, hsl(268, 80%, 40%) 100%);
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(268, 60%, 50%) 0%, hsl(268, 80%, 60%) 100%);
     --gradient-bg: linear-gradient(135deg, hsl(258, 40%, 8%) 0%, hsl(240, 40%, 10%) 100%);
     
-    --glass-bg: hsla(258, 30%, 15%, 0.9);
-    --glass-border: hsla(258, 70%, 65%, 0.3);
+    --glass-bg: hsla(258, 30%, 12%, 0.85);
+    --glass-border: hsla(258, 70%, 65%, 0.25);
     
     --shadow-lg: 0 10px 40px -10px hsla(258, 70%, 20%, 0.5);
     --shadow-xl: 0 20px 60px -15px hsla(258, 70%, 20%, 0.6);
@@ -130,9 +137,21 @@ All colors MUST be HSL.
   
   .glass {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  }
+  
+  .glass-strong {
+    background: hsla(0, 0%, 100%, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--glass-border);
+  }
+  
+  .dark .glass-strong {
+    background: hsla(258, 30%, 15%, 0.95);
   }
   
   .gradient-primary {
