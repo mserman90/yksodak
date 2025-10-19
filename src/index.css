@@ -7,36 +7,49 @@ All colors MUST be HSL.
 */
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+:root {
+    --background: 258 90% 97%;
+    --foreground: 258 10% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 258 10% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 258 10% 10%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 258 60% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 258 30% 90%;
+    --secondary-foreground: 258 10% 10%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 258 20% 95%;
+    --muted-foreground: 258 10% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 268 70% 65%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 258 20% 88%;
+    --input: 258 20% 88%;
+    --ring: 258 60% 60%;
 
-    --radius: 0.5rem;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --info: 217 91% 60%;
+
+    --radius: 1rem;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(258, 60%, 60%) 0%, hsl(268, 70%, 65%) 100%);
+    --gradient-bg: linear-gradient(135deg, hsl(258, 90%, 97%) 0%, hsl(217, 91%, 97%) 100%);
+    
+    --glass-bg: hsla(0, 0%, 100%, 0.9);
+    --glass-border: hsla(258, 60%, 60%, 0.2);
+    
+    --shadow-lg: 0 10px 40px -10px hsla(258, 60%, 60%, 0.3);
+    --shadow-xl: 0 20px 60px -15px hsla(258, 60%, 60%, 0.4);
 
     --sidebar-background: 0 0% 98%;
 
@@ -56,33 +69,42 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 258 40% 8%;
+    --foreground: 258 10% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 258 30% 12%;
+    --card-foreground: 258 10% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 258 30% 12%;
+    --popover-foreground: 258 10% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 258 70% 65%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 258 30% 18%;
+    --secondary-foreground: 258 10% 95%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 258 30% 18%;
+    --muted-foreground: 258 10% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 268 80% 70%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 258 30% 20%;
+    --input: 258 30% 20%;
+    --ring: 258 70% 65%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(268, 60%, 30%) 0%, hsl(268, 80%, 40%) 100%);
+    --gradient-bg: linear-gradient(135deg, hsl(258, 40%, 8%) 0%, hsl(240, 40%, 10%) 100%);
+    
+    --glass-bg: hsla(258, 30%, 15%, 0.9);
+    --glass-border: hsla(258, 70%, 65%, 0.3);
+    
+    --shadow-lg: 0 10px 40px -10px hsla(258, 70%, 20%, 0.5);
+    --shadow-xl: 0 20px 60px -15px hsla(258, 70%, 20%, 0.6);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -101,5 +123,74 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+  }
+  
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-bg {
+    background: var(--gradient-bg);
+  }
+  
+  .shadow-elegant {
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .shadow-premium {
+    box-shadow: var(--shadow-xl);
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  @keyframes slideInRight {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  .slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+  
+  @keyframes bounceGentle {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+  
+  .bounce-gentle {
+    animation: bounceGentle 0.6s ease-in-out;
   }
 }
