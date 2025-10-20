@@ -11,7 +11,13 @@ import { Loader2, GraduationCap } from "lucide-react";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Geçerli bir email adresi giriniz");
-const passwordSchema = z.string().min(6, "Şifre en az 6 karakter olmalıdır");
+const passwordSchema = z
+  .string()
+  .min(8, "Şifre en az 8 karakter olmalıdır")
+  .regex(/[A-Z]/, "Şifre en az bir büyük harf içermelidir")
+  .regex(/[a-z]/, "Şifre en az bir küçük harf içermelidir")
+  .regex(/[0-9]/, "Şifre en az bir rakam içermelidir")
+  .regex(/[^A-Za-z0-9]/, "Şifre en az bir özel karakter içermelidir");
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -289,7 +295,7 @@ const Auth = () => {
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="En az 6 karakter"
+                      placeholder="En az 8 karakter, büyük/küçük harf, rakam ve özel karakter"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required

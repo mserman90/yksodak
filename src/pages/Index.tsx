@@ -41,29 +41,40 @@ type Priority = "high" | "medium" | "low";
 type Mood = 1 | 2 | 3 | 4 | 5;
 
 interface Task {
-  id: number;
+  id: string;
   text: string;
   priority: Priority;
   completed: boolean;
-  createdAt: string;
+  created_at: string;
 }
 
 interface Plan {
-  id: number;
+  id: string;
   text: string;
+  date: string;
 }
 
 interface Habit {
-  id: number;
-  text: string;
-  completedDays: string[];
-  createdAt: string;
+  id: string;
+  name: string;
+  days: Record<string, boolean>;
+  created_at: string;
 }
 
 interface MoodEntry {
+  id?: string;
   date: string;
-  mood: Mood;
+  mood: string;
   note?: string;
+}
+
+interface UserStats {
+  points: number;
+  pomodoro_count: number;
+  study_minutes: number;
+  work_duration: number;
+  short_break: number;
+  long_break: number;
 }
 
 const Index = () => {
@@ -72,12 +83,18 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("pomodoro");
   const [darkMode, setDarkMode] = useState(false);
-  const [points, setPoints] = useState(0);
+  const [userStats, setUserStats] = useState<UserStats>({
+    points: 0,
+    pomodoro_count: 0,
+    study_minutes: 0,
+    work_duration: 25,
+    short_break: 5,
+    long_break: 15,
+  });
   const { toast } = useToast();
 
   // Auth check
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
@@ -89,7 +106,6 @@ const Index = () => {
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
@@ -106,57 +122,143 @@ const Index = () => {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
-  const [pomodoroCount, setPomodoroCount] = useState(0);
-  const [workDuration, setWorkDuration] = useState(25);
-  const [shortBreak, setShortBreak] = useState(5);
-  const [longBreak, setLongBreak] = useState(15);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Tasks state
+  // Data state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskInput, setTaskInput] = useState("");
   const [taskPriority, setTaskPriority] = useState<Priority>("medium");
 
-  // Planner state
   const [weekOffset, setWeekOffset] = useState(0);
   const [weeklyPlans, setWeeklyPlans] = useState<Record<string, Plan[]>>({});
   const [planInput, setPlanInput] = useState("");
   const [planDay, setPlanDay] = useState(0);
 
-  // Habits state
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitInput, setHabitInput] = useState("");
 
-  // Mood state
   const [moodHistory, setMoodHistory] = useState<MoodEntry[]>([]);
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [moodNote, setMoodNote] = useState("");
 
-  // Load from localStorage
+  // Load user stats and data from database
   useEffect(() => {
-    const loadData = () => {
-      const saved = {
-        darkMode: localStorage.getItem("darkMode") === "true",
-        points: parseInt(localStorage.getItem("points") || "0"),
-        pomodoroCount: parseInt(localStorage.getItem("pomodoroCount") || "0"),
-        tasks: JSON.parse(localStorage.getItem("tasks") || "[]"),
-        weeklyPlans: JSON.parse(localStorage.getItem("weeklyPlans") || "{}"),
-        habits: JSON.parse(localStorage.getItem("habits") || "[]"),
-        moodHistory: JSON.parse(localStorage.getItem("moodHistory") || "[]"),
-      };
-      
-      setDarkMode(saved.darkMode);
-      setPoints(saved.points);
-      setPomodoroCount(saved.pomodoroCount);
-      setTasks(saved.tasks);
-      setWeeklyPlans(saved.weeklyPlans);
-      setHabits(saved.habits);
-      setMoodHistory(saved.moodHistory);
-    };
-    loadData();
+    if (user) {
+      loadUserData();
+    }
+  }, [user]);
+
+  const loadUserData = async () => {
+    if (!user) return;
+
+    try {
+      // Load user stats
+      const { data: stats } = await supabase
+        .from("user_stats")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (stats) {
+        setUserStats({
+          points: stats.points,
+          pomodoro_count: stats.pomodoro_count,
+          study_minutes: stats.study_minutes,
+          work_duration: stats.work_duration,
+          short_break: stats.short_break,
+          long_break: stats.long_break,
+        });
+        setTimeLeft(stats.work_duration * 60);
+      }
+
+      // Load tasks
+      const { data: tasksData } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (tasksData) {
+        setTasks(tasksData as Task[]);
+      }
+
+      // Load plans
+      const { data: plansData } = await supabase
+        .from("plans")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("date", { ascending: true });
+
+      if (plansData) {
+        const grouped: Record<string, Plan[]> = {};
+        plansData.forEach((plan) => {
+          if (!grouped[plan.date]) {
+            grouped[plan.date] = [];
+          }
+          grouped[plan.date].push(plan);
+        });
+        setWeeklyPlans(grouped);
+      }
+
+      // Load habits
+      const { data: habitsData } = await supabase
+        .from("habits")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (habitsData) {
+        setHabits(habitsData.map(h => ({
+          ...h,
+          days: h.days as Record<string, boolean>
+        })));
+      }
+
+      // Load mood entries
+      const { data: moodData } = await supabase
+        .from("mood_entries")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false });
+
+      if (moodData) {
+        setMoodHistory(moodData);
+      }
+    } catch (error) {
+      console.error("Error loading user data:", error);
+    }
+  };
+
+  // Update user stats in database
+  const updateUserStats = async (updates: Partial<UserStats>) => {
+    if (!user) return;
+
+    const newStats = { ...userStats, ...updates };
+    setUserStats(newStats);
+
+    try {
+      await supabase
+        .from("user_stats")
+        .update({
+          points: newStats.points,
+          pomodoro_count: newStats.pomodoro_count,
+          study_minutes: newStats.study_minutes,
+          work_duration: newStats.work_duration,
+          short_break: newStats.short_break,
+          long_break: newStats.long_break,
+        })
+        .eq("user_id", user.id);
+    } catch (error) {
+      console.error("Error updating user stats:", error);
+    }
+  };
+
+  // Dark mode
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem("darkMode") === "true";
+    setDarkMode(savedDarkMode);
   }, []);
 
-  // Save to localStorage
   useEffect(() => {
     localStorage.setItem("darkMode", darkMode.toString());
     if (darkMode) {
@@ -166,35 +268,12 @@ const Index = () => {
     }
   }, [darkMode]);
 
-  useEffect(() => {
-    localStorage.setItem("points", points.toString());
-  }, [points]);
-
-  useEffect(() => {
-    localStorage.setItem("pomodoroCount", pomodoroCount.toString());
-  }, [pomodoroCount]);
-
-  useEffect(() => {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-  }, [tasks]);
-
-  useEffect(() => {
-    localStorage.setItem("weeklyPlans", JSON.stringify(weeklyPlans));
-  }, [weeklyPlans]);
-
-  useEffect(() => {
-    localStorage.setItem("habits", JSON.stringify(habits));
-  }, [habits]);
-
-  useEffect(() => {
-    localStorage.setItem("moodHistory", JSON.stringify(moodHistory));
-  }, [moodHistory]);
-
   const addPoints = (amount: number) => {
-    setPoints((prev) => prev + amount);
+    const newPoints = userStats.points + amount;
+    updateUserStats({ points: newPoints });
     toast({
       title: `+${amount} puan kazandın! 🌟`,
-      description: `Toplam: ${points + amount} puan`,
+      description: `Toplam: ${newPoints} puan`,
     });
   };
 
@@ -231,21 +310,25 @@ const Index = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     setIsRunning(false);
     setIsBreak(false);
-    setTimeLeft(workDuration * 60);
+    setTimeLeft(userStats.work_duration * 60);
   };
 
   const handleTimerComplete = () => {
     if (!isBreak) {
-      setPomodoroCount((prev) => prev + 1);
+      const newPomodoroCount = userStats.pomodoro_count + 1;
+      const newStudyMinutes = userStats.study_minutes + userStats.work_duration;
+      updateUserStats({
+        pomodoro_count: newPomodoroCount,
+        study_minutes: newStudyMinutes,
+      });
       addPoints(25);
       toast({
         title: "🎉 Harika! Bir pomodoro tamamladın!",
         description: "Mola zamanı!",
       });
 
-      const newCount = pomodoroCount + 1;
       setIsBreak(true);
-      const breakTime = newCount % 4 === 0 ? longBreak : shortBreak;
+      const breakTime = newPomodoroCount % 4 === 0 ? userStats.long_break : userStats.short_break;
       setTimeLeft(breakTime * 60);
     } else {
       toast({
@@ -253,19 +336,19 @@ const Index = () => {
         description: "Tekrar çalışmaya başlayabilirsin.",
       });
       setIsBreak(false);
-      setTimeLeft(workDuration * 60);
+      setTimeLeft(userStats.work_duration * 60);
     }
   };
 
   const getProgressPercentage = () => {
     const totalTime = isBreak
-      ? (pomodoroCount % 4 === 0 ? longBreak : shortBreak) * 60
-      : workDuration * 60;
+      ? (userStats.pomodoro_count % 4 === 0 ? userStats.long_break : userStats.short_break) * 60
+      : userStats.work_duration * 60;
     return ((totalTime - timeLeft) / totalTime) * 100;
   };
 
   // Task functions
-  const addTask = () => {
+  const addTask = async () => {
     if (!taskInput.trim()) {
       toast({
         title: "Hata",
@@ -275,34 +358,76 @@ const Index = () => {
       return;
     }
 
-    const newTask: Task = {
-      id: Date.now(),
-      text: taskInput,
-      priority: taskPriority,
-      completed: false,
-      createdAt: new Date().toISOString(),
-    };
+    if (!user) return;
 
-    setTasks([newTask, ...tasks]);
-    setTaskInput("");
-    addPoints(5);
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .insert({
+          user_id: user.id,
+          text: taskInput,
+          priority: taskPriority,
+          completed: false,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setTasks([data as Task, ...tasks]);
+        setTaskInput("");
+        addPoints(5);
+      }
+    } catch (error) {
+      console.error("Error adding task:", error);
+      toast({
+        title: "Hata",
+        description: "Görev eklenirken bir hata oluştu",
+        variant: "destructive",
+      });
+    }
   };
 
-  const toggleTask = (id: number) => {
-    setTasks(
-      tasks.map((task) => {
-        if (task.id === id) {
-          if (!task.completed) addPoints(10);
-          return { ...task, completed: !task.completed };
-        }
-        return task;
-      })
-    );
+  const toggleTask = async (id: string) => {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    const newCompleted = !task.completed;
+
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ completed: newCompleted })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setTasks(
+        tasks.map((t) => {
+          if (t.id === id) {
+            if (!t.completed) addPoints(10);
+            return { ...t, completed: newCompleted };
+          }
+          return t;
+        })
+      );
+    } catch (error) {
+      console.error("Error toggling task:", error);
+    }
   };
 
-  const deleteTask = (id: number) => {
-    setTasks(tasks.filter((t) => t.id !== id));
-    toast({ title: "Görev silindi" });
+  const deleteTask = async (id: string) => {
+    try {
+      const { error } = await supabase.from("tasks").delete().eq("id", id);
+
+      if (error) throw error;
+
+      setTasks(tasks.filter((t) => t.id !== id));
+      toast({ title: "Görev silindi" });
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
   };
 
   // Planner functions
@@ -322,7 +447,7 @@ const Index = () => {
     return dates;
   };
 
-  const addPlan = () => {
+  const addPlan = async () => {
     if (!planInput.trim()) {
       toast({
         title: "Hata",
@@ -332,34 +457,62 @@ const Index = () => {
       return;
     }
 
+    if (!user) return;
+
     const dates = getWeekDates(weekOffset);
     const dateKey = dates[planDay].toISOString().split("T")[0];
 
-    const newPlan: Plan = {
-      id: Date.now(),
-      text: planInput,
-    };
+    try {
+      const { data, error } = await supabase
+        .from("plans")
+        .insert({
+          user_id: user.id,
+          text: planInput,
+          date: dateKey,
+        })
+        .select()
+        .single();
 
-    setWeeklyPlans({
-      ...weeklyPlans,
-      [dateKey]: [...(weeklyPlans[dateKey] || []), newPlan],
-    });
+      if (error) throw error;
 
-    setPlanInput("");
-    addPoints(5);
-    toast({ title: "Plan eklendi!" });
+      if (data) {
+        setWeeklyPlans({
+          ...weeklyPlans,
+          [dateKey]: [...(weeklyPlans[dateKey] || []), data],
+        });
+
+        setPlanInput("");
+        addPoints(5);
+        toast({ title: "Plan eklendi!" });
+      }
+    } catch (error) {
+      console.error("Error adding plan:", error);
+      toast({
+        title: "Hata",
+        description: "Plan eklenirken bir hata oluştu",
+        variant: "destructive",
+      });
+    }
   };
 
-  const deletePlan = (dateKey: string, planId: number) => {
-    setWeeklyPlans({
-      ...weeklyPlans,
-      [dateKey]: weeklyPlans[dateKey].filter((p) => p.id !== planId),
-    });
-    toast({ title: "Plan silindi" });
+  const deletePlan = async (dateKey: string, planId: string) => {
+    try {
+      const { error } = await supabase.from("plans").delete().eq("id", planId);
+
+      if (error) throw error;
+
+      setWeeklyPlans({
+        ...weeklyPlans,
+        [dateKey]: weeklyPlans[dateKey].filter((p) => p.id !== planId),
+      });
+      toast({ title: "Plan silindi" });
+    } catch (error) {
+      console.error("Error deleting plan:", error);
+    }
   };
 
   // Habit functions
-  const addHabit = () => {
+  const addHabit = async () => {
     if (!habitInput.trim()) {
       toast({
         title: "Hata",
@@ -369,44 +522,87 @@ const Index = () => {
       return;
     }
 
-    const newHabit: Habit = {
-      id: Date.now(),
-      text: habitInput,
-      completedDays: [],
-      createdAt: new Date().toISOString(),
-    };
+    if (!user) return;
 
-    setHabits([newHabit, ...habits]);
-    setHabitInput("");
-    addPoints(5);
-    toast({ title: "Alışkanlık eklendi!" });
+    try {
+      const { data, error } = await supabase
+        .from("habits")
+        .insert({
+          user_id: user.id,
+          name: habitInput,
+          days: {},
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setHabits([{ ...data, days: data.days as Record<string, boolean> }, ...habits]);
+        setHabitInput("");
+        addPoints(5);
+        toast({ title: "Alışkanlık eklendi!" });
+      }
+    } catch (error) {
+      console.error("Error adding habit:", error);
+      toast({
+        title: "Hata",
+        description: "Alışkanlık eklenirken bir hata oluştu",
+        variant: "destructive",
+      });
+    }
   };
 
-  const toggleHabitDay = (habitId: number, dateKey: string) => {
-    setHabits(
-      habits.map((habit) => {
-        if (habit.id === habitId) {
-          const isCompleted = habit.completedDays.includes(dateKey);
-          if (!isCompleted) addPoints(10);
-          return {
-            ...habit,
-            completedDays: isCompleted
-              ? habit.completedDays.filter((d) => d !== dateKey)
-              : [...habit.completedDays, dateKey],
-          };
-        }
-        return habit;
-      })
-    );
+  const toggleHabitDay = async (habitId: string, dateKey: string) => {
+    const habit = habits.find((h) => h.id === habitId);
+    if (!habit) return;
+
+    const newDays = { ...habit.days };
+    const isCompleted = newDays[dateKey];
+
+    if (isCompleted) {
+      delete newDays[dateKey];
+    } else {
+      newDays[dateKey] = true;
+      addPoints(10);
+    }
+
+    try {
+      const { error } = await supabase
+        .from("habits")
+        .update({ days: newDays })
+        .eq("id", habitId);
+
+      if (error) throw error;
+
+      setHabits(
+        habits.map((h) => {
+          if (h.id === habitId) {
+            return { ...h, days: newDays };
+          }
+          return h;
+        })
+      );
+    } catch (error) {
+      console.error("Error toggling habit:", error);
+    }
   };
 
-  const deleteHabit = (id: number) => {
-    setHabits(habits.filter((h) => h.id !== id));
-    toast({ title: "Alışkanlık silindi" });
+  const deleteHabit = async (id: string) => {
+    try {
+      const { error } = await supabase.from("habits").delete().eq("id", id);
+
+      if (error) throw error;
+
+      setHabits(habits.filter((h) => h.id !== id));
+      toast({ title: "Alışkanlık silindi" });
+    } catch (error) {
+      console.error("Error deleting habit:", error);
+    }
   };
 
   // Mood functions
-  const saveMood = () => {
+  const saveMood = async () => {
     if (!selectedMood) {
       toast({
         title: "Hata",
@@ -416,27 +612,61 @@ const Index = () => {
       return;
     }
 
+    if (!user) return;
+
     const today = new Date().toISOString().split("T")[0];
-    const existingIndex = moodHistory.findIndex((m) => m.date === today);
+    const existingEntry = moodHistory.find((m) => m.date === today);
 
-    const newEntry: MoodEntry = {
-      date: today,
-      mood: selectedMood,
-      note: moodNote,
-    };
+    try {
+      if (existingEntry) {
+        const { error } = await supabase
+          .from("mood_entries")
+          .update({
+            mood: selectedMood.toString(),
+            note: moodNote,
+          })
+          .eq("id", existingEntry.id);
 
-    if (existingIndex >= 0) {
-      const updated = [...moodHistory];
-      updated[existingIndex] = newEntry;
-      setMoodHistory(updated);
-    } else {
-      setMoodHistory([newEntry, ...moodHistory]);
+        if (error) throw error;
+
+        setMoodHistory(
+          moodHistory.map((m) =>
+            m.date === today
+              ? { ...m, mood: selectedMood.toString(), note: moodNote }
+              : m
+          )
+        );
+      } else {
+        const { data, error } = await supabase
+          .from("mood_entries")
+          .insert({
+            user_id: user.id,
+            mood: selectedMood.toString(),
+            note: moodNote,
+            date: today,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          setMoodHistory([data, ...moodHistory]);
+        }
+      }
+
+      addPoints(5);
+      toast({ title: "Ruh halin kaydedildi!" });
+      setSelectedMood(null);
+      setMoodNote("");
+    } catch (error) {
+      console.error("Error saving mood:", error);
+      toast({
+        title: "Hata",
+        description: "Ruh hali kaydedilirken bir hata oluştu",
+        variant: "destructive",
+      });
     }
-
-    addPoints(5);
-    toast({ title: "Ruh halin kaydedildi!" });
-    setSelectedMood(null);
-    setMoodNote("");
   };
 
   const moodEmojis = ["😢", "😟", "😐", "😊", "🤩"];
@@ -472,7 +702,6 @@ const Index = () => {
   };
 
   const completedTasks = tasks.filter((t) => t.completed).length;
-  const totalStudyMinutes = pomodoroCount * workDuration;
   const currentStreak = habits.reduce((max, habit) => {
     let streak = 0;
     const today = new Date();
@@ -480,7 +709,7 @@ const Index = () => {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       const dateKey = date.toISOString().split("T")[0];
-      if (habit.completedDays.includes(dateKey)) {
+      if (habit.days[dateKey]) {
         streak++;
       } else {
         break;
@@ -528,7 +757,7 @@ const Index = () => {
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="flex items-center space-x-1.5 sm:space-x-2 bg-primary/10 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full">
                 <Star className="text-amber-500 fill-amber-500" size={16} />
-                <span className="font-bold text-primary text-sm sm:text-base bounce-gentle">{points}</span>
+                <span className="font-bold text-primary text-sm sm:text-base bounce-gentle">{userStats.points}</span>
               </div>
               <UserGuide />
               <Button
@@ -674,10 +903,11 @@ const Index = () => {
                     type="number"
                     min="1"
                     max="60"
-                    value={workDuration}
+                    value={userStats.work_duration}
                     onChange={(e) => {
-                      setWorkDuration(parseInt(e.target.value));
-                      if (!isRunning && !isBreak) setTimeLeft(parseInt(e.target.value) * 60);
+                      const newDuration = parseInt(e.target.value);
+                      updateUserStats({ work_duration: newDuration });
+                      if (!isRunning && !isBreak) setTimeLeft(newDuration * 60);
                     }}
                     className="text-center text-base sm:text-lg font-semibold bg-background"
                   />
@@ -688,8 +918,8 @@ const Index = () => {
                     type="number"
                     min="1"
                     max="30"
-                    value={shortBreak}
-                    onChange={(e) => setShortBreak(parseInt(e.target.value))}
+                    value={userStats.short_break}
+                    onChange={(e) => updateUserStats({ short_break: parseInt(e.target.value) })}
                     className="text-center text-base sm:text-lg font-semibold bg-background"
                   />
                 </div>
@@ -699,8 +929,8 @@ const Index = () => {
                     type="number"
                     min="1"
                     max="60"
-                    value={longBreak}
-                    onChange={(e) => setLongBreak(parseInt(e.target.value))}
+                    value={userStats.long_break}
+                    onChange={(e) => updateUserStats({ long_break: parseInt(e.target.value) })}
                     className="text-center text-base sm:text-lg font-semibold bg-background"
                   />
                 </div>
@@ -714,13 +944,13 @@ const Index = () => {
                     <div
                       key={i}
                       className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-colors ${
-                        i < pomodoroCount % 4 ? "bg-primary" : "bg-muted"
+                        i < userStats.pomodoro_count % 4 ? "bg-primary" : "bg-muted"
                       }`}
                     />
                   ))}
                 </div>
                 <span className="font-bold text-primary">
-                  {pomodoroCount % 4}/4
+                  {userStats.pomodoro_count % 4}/4
                 </span>
               </div>
             </div>
@@ -791,7 +1021,7 @@ const Index = () => {
                             {task.text}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(task.createdAt).toLocaleDateString("tr-TR")}
+                            {new Date(task.created_at).toLocaleDateString("tr-TR")}
                           </p>
                         </div>
                         <Button
@@ -899,45 +1129,52 @@ const Index = () => {
                 const isToday = date.toDateString() === new Date().toDateString();
 
                 return (
-                  <div
+                  <Card
                     key={dateKey}
-                    className={`glass-strong rounded-xl p-3 sm:p-4 border ${
-                      isToday ? "ring-2 ring-primary border-primary/50" : "border-border/50"
-                    }`}
+                    className={`glass-strong p-3 sm:p-4 ${
+                      isToday ? "ring-2 ring-primary" : ""
+                    } border border-border/50`}
                   >
                     <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-semibold text-sm sm:text-base text-foreground">
-                        <span className="hidden sm:inline">{dayNamesFull[index]}</span>
-                        <span className="sm:hidden">{dayNames[date.getDay()]}</span>
-                      </h3>
-                      <span className="text-xs sm:text-sm text-muted-foreground">
-                        {date.getDate()}
-                      </span>
+                      <div>
+                        <h3 className="font-bold text-xs sm:text-sm text-foreground">
+                          {dayNames[index]}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {date.getDate()}/{date.getMonth() + 1}
+                        </p>
+                      </div>
+                      {isToday && (
+                        <span className="text-[10px] sm:text-xs bg-primary text-primary-foreground px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">
+                          Bugün
+                        </span>
+                      )}
                     </div>
+
                     <div className="space-y-2">
                       {plans.map((plan) => (
                         <div
                           key={plan.id}
-                          className="bg-primary/10 p-2 rounded-lg text-xs sm:text-sm"
+                          className="glass p-2 rounded-lg text-xs sm:text-sm flex justify-between items-start gap-2 bg-background"
                         >
-                          <div className="flex justify-between items-start gap-2">
-                            <span className="text-foreground flex-1 break-words">{plan.text}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0"
-                              onClick={() => deletePlan(dateKey, plan.id)}
-                            >
-                              <X size={12} className="text-destructive" />
-                            </Button>
-                          </div>
+                          <span className="text-foreground break-words flex-1">{plan.text}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deletePlan(dateKey, plan.id)}
+                            className="h-5 w-5 sm:h-6 sm:w-6 text-destructive hover:text-destructive/90 flex-shrink-0"
+                          >
+                            <X size={12} />
+                          </Button>
                         </div>
                       ))}
                       {plans.length === 0 && (
-                        <p className="text-muted-foreground text-xs sm:text-sm italic">Plan yok</p>
+                        <p className="text-xs text-muted-foreground text-center py-2">
+                          Plan yok
+                        </p>
                       )}
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
@@ -947,68 +1184,65 @@ const Index = () => {
         {/* Habits Tab */}
         {activeTab === "habits" && (
           <Card className="glass p-4 sm:p-6 shadow-premium fade-in border border-border/50">
-            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center text-foreground">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 flex items-center text-foreground">
               <CheckCircle2 className="mr-2 text-primary" size={20} />
               Alışkanlık Takibi
             </h2>
 
             {/* Add Habit Form */}
             <div className="glass-strong rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 border border-border/50">
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex gap-3">
                 <Input
-                  placeholder="Yeni alışkanlık ekle (örn: Her gün 1 saat matematik)"
+                  placeholder="Yeni alışkanlık ekle (örn: Sabah sporou)"
                   value={habitInput}
                   onChange={(e) => setHabitInput(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && addHabit()}
-                  className="flex-1 bg-background"
+                  className="bg-background"
                 />
                 <Button onClick={addHabit} className="gradient-primary text-white font-semibold">
-                  <Plus size={18} className="mr-2" />
-                  Ekle
+                  <Plus size={18} className="sm:mr-2" />
+                  <span className="hidden sm:inline">Ekle</span>
                 </Button>
               </div>
             </div>
 
-            {/* Habits List */}
+            {/* Habits Grid */}
             {habits.length > 0 ? (
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-4">
                 {habits.map((habit) => (
-                  <div
-                    key={habit.id}
-                    className="glass-strong rounded-xl p-3 sm:p-4 border border-border/50 fade-in"
-                  >
-                    <div className="flex justify-between items-center mb-3 gap-2">
-                      <h3 className="font-semibold text-sm sm:text-base text-foreground flex-1 break-words">{habit.text}</h3>
+                  <div key={habit.id} className="glass-strong rounded-xl p-3 sm:p-4 border border-border/50">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="font-bold text-sm sm:text-base text-foreground">{habit.name}</h3>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => deleteHabit(habit.id)}
-                        className="text-destructive hover:text-destructive/90 flex-shrink-0 h-8 w-8"
+                        className="text-destructive hover:text-destructive/90 h-7 w-7 sm:h-8 sm:w-8"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </Button>
                     </div>
-                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+
+                    <div className="flex gap-1 sm:gap-2 justify-between">
                       {last7Days.map((date) => {
                         const dateKey = date.toISOString().split("T")[0];
-                        const isCompleted = habit.completedDays.includes(dateKey);
-                        const isToday =
-                          date.toDateString() === new Date().toDateString();
+                        const isCompleted = habit.days[dateKey];
+                        const isToday = date.toDateString() === new Date().toDateString();
 
                         return (
                           <button
                             key={dateKey}
                             onClick={() => toggleHabitDay(habit.id, dateKey)}
-                            className={`aspect-square rounded-lg p-1 sm:p-2 transition-all text-xs ${
+                            className={`flex-1 aspect-square rounded-lg text-[10px] sm:text-xs font-medium transition-all ${
                               isCompleted
-                                ? "bg-primary text-primary-foreground font-semibold"
-                                : "bg-muted hover:bg-muted/70 text-muted-foreground"
-                            } ${isToday ? "ring-2 ring-accent" : ""}`}
+                                ? "bg-primary text-primary-foreground shadow-md scale-105"
+                                : "glass hover:bg-accent"
+                            } ${isToday ? "ring-2 ring-primary ring-offset-2" : ""}`}
                           >
-                            <div className="font-medium text-[10px] sm:text-xs">
-                              {dayNames[date.getDay()]}
+                            <div className="flex flex-col items-center justify-center h-full">
+                              <div className="text-[8px] sm:text-xs">{dayNames[date.getDay()]}</div>
+                              <div className="font-bold">{date.getDate()}</div>
                             </div>
-                            <div className="text-[10px] sm:text-xs">{date.getDate()}</div>
                           </button>
                         );
                       })}
@@ -1020,7 +1254,7 @@ const Index = () => {
               <div className="text-center py-12">
                 <CheckCircle2 size={48} className="mx-auto text-muted mb-4" />
                 <p className="text-muted-foreground text-sm">
-                  Henüz alışkanlık eklemedin. İlk alışkanlığını oluştur!
+                  Henüz alışkanlık eklemedin. Hadi başlayalım!
                 </p>
               </div>
             )}
@@ -1032,24 +1266,29 @@ const Index = () => {
           <Card className="glass p-4 sm:p-6 shadow-premium fade-in border border-border/50">
             <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center text-foreground">
               <Smile className="mr-2 text-primary" size={20} />
-              Bugün Nasıl Hissediyorsun?
+              Ruh Halim
             </h2>
 
             {/* Mood Selector */}
             <div className="glass-strong rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-border/50">
-              <div className="grid grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
+              <h3 className="font-semibold mb-4 text-center text-sm sm:text-base text-foreground">
+                Bugün nasıl hissediyorsun?
+              </h3>
+              <div className="flex justify-between gap-2 mb-4">
                 {[1, 2, 3, 4, 5].map((mood) => (
                   <button
                     key={mood}
                     onClick={() => setSelectedMood(mood as Mood)}
-                    className={`p-2 sm:p-4 rounded-xl transition-all ${
+                    className={`flex-1 p-3 sm:p-4 rounded-xl transition-all ${
                       selectedMood === mood
-                        ? "bg-primary text-primary-foreground scale-105 sm:scale-110 shadow-lg"
-                        : "bg-muted hover:bg-muted/70"
+                        ? "bg-primary text-primary-foreground shadow-lg scale-105"
+                        : "glass hover:scale-105"
                     }`}
                   >
-                    <div className="text-2xl sm:text-4xl mb-1 sm:mb-2">{moodEmojis[mood - 1]}</div>
-                    <div className="text-[10px] sm:text-xs text-foreground">{moodLabels[mood - 1]}</div>
+                    <div className="text-3xl sm:text-4xl mb-2">{moodEmojis[mood - 1]}</div>
+                    <div className="text-[10px] sm:text-xs font-medium text-center">
+                      {moodLabels[mood - 1]}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -1062,111 +1301,114 @@ const Index = () => {
               />
 
               <Button onClick={saveMood} className="w-full gradient-primary text-white font-semibold">
+                <Star className="mr-2" size={18} />
                 Kaydet
               </Button>
             </div>
 
             {/* Mood History */}
-            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-foreground">Ruh Hali Geçmişi</h3>
-            {moodHistory.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {moodHistory.slice(0, 12).map((entry, index) => (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-sm sm:text-base text-foreground">Ruh Hali Geçmişi</h3>
+              {moodHistory.length > 0 ? (
+                moodHistory.slice(0, 10).map((entry) => (
                   <div
-                    key={index}
-                    className="glass-strong rounded-xl p-3 sm:p-4 border border-border/50 fade-in"
+                    key={entry.id || entry.date}
+                    className="glass-strong rounded-xl p-3 sm:p-4 flex items-start gap-3 border border-border/50"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-3xl sm:text-4xl">{moodEmojis[entry.mood - 1]}</span>
-                      <span className="text-xs sm:text-sm text-muted-foreground">
-                        {new Date(entry.date).toLocaleDateString("tr-TR")}
-                      </span>
+                    <div className="text-2xl sm:text-3xl">{moodEmojis[parseInt(entry.mood) - 1]}</div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <span className="font-medium text-xs sm:text-sm text-foreground">
+                          {new Date(entry.date).toLocaleDateString("tr-TR", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {moodLabels[parseInt(entry.mood) - 1]}
+                        </span>
+                      </div>
+                      {entry.note && (
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">{entry.note}</p>
+                      )}
                     </div>
-                    <p className="font-medium text-sm sm:text-base text-foreground">{moodLabels[entry.mood - 1]}</p>
-                    {entry.note && (
-                      <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                        {entry.note}
-                      </p>
-                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Smile size={48} className="mx-auto text-muted mb-4" />
-                <p className="text-muted-foreground text-sm">
-                  Henüz ruh hali kaydın yok. İlk kaydını oluştur!
-                </p>
-              </div>
-            )}
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <Smile size={48} className="mx-auto text-muted mb-4" />
+                  <p className="text-muted-foreground text-sm">
+                    Henüz ruh hali kaydı yok. İlk kaydını oluştur!
+                  </p>
+                </div>
+              )}
+            </div>
           </Card>
         )}
 
         {/* Stats Tab */}
         {activeTab === "stats" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 fade-in">
-            <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">Toplam Puan</h3>
-                <Star className="text-amber-500 fill-amber-500" size={20} />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-primary">{points}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                Harika gidiyorsun!
-              </p>
-            </Card>
+          <div className="fade-in">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                  <Star className="text-amber-500 fill-amber-500" size={24} />
+                  <span className="text-3xl sm:text-4xl font-bold text-primary">{userStats.points}</span>
+                </div>
+                <h3 className="font-semibold text-foreground">Toplam Puan</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">Şimdiye kadar kazandığın puanlar</p>
+              </Card>
 
-            <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">Pomodoro</h3>
-                <Clock className="text-primary" size={20} />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-primary">{pomodoroCount}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                {totalStudyMinutes} dakika çalışma
-              </p>
-            </Card>
+              <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                  <Clock className="text-primary" size={24} />
+                  <span className="text-3xl sm:text-4xl font-bold text-primary">{userStats.pomodoro_count}</span>
+                </div>
+                <h3 className="font-semibold text-foreground">Pomodoro</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  {userStats.study_minutes} dakika çalıştın
+                </p>
+              </Card>
 
-            <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">Görevler</h3>
-                <CheckSquare className="text-primary" size={20} />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-primary">
-                {completedTasks}/{tasks.length}
-              </p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">Tamamlandı</p>
-            </Card>
+              <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                  <CheckSquare className="text-success" size={24} />
+                  <span className="text-3xl sm:text-4xl font-bold text-primary">
+                    {completedTasks}/{tasks.length}
+                  </span>
+                </div>
+                <h3 className="font-semibold text-foreground">Görevler</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">Tamamlanan / Toplam</p>
+              </Card>
 
-            <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">Alışkanlıklar</h3>
-                <CheckCircle2 className="text-primary" size={20} />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-primary">{habits.length}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                Aktif alışkanlık
-              </p>
-            </Card>
+              <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                  <CheckCircle2 className="text-primary" size={24} />
+                  <span className="text-3xl sm:text-4xl font-bold text-primary">{habits.length}</span>
+                </div>
+                <h3 className="font-semibold text-foreground">Alışkanlıklar</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">Takip edilen alışkanlık sayısı</p>
+              </Card>
 
-            <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">Seri</h3>
-                <CheckCircle2 className="text-primary" size={20} />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-primary">{currentStreak}</p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">Gün üst üste</p>
-            </Card>
+              <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                  <Star className="text-amber-500" size={24} />
+                  <span className="text-3xl sm:text-4xl font-bold text-primary">{currentStreak}</span>
+                </div>
+                <h3 className="font-semibold text-foreground">Streak</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">Günlük alışkanlık serisi</p>
+              </Card>
 
-            <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">Ruh Hali</h3>
-                <Smile className="text-primary" size={20} />
-              </div>
-              <p className="text-3xl sm:text-4xl font-bold text-primary">
-                {moodHistory.length}
-              </p>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">Kayıt</p>
-            </Card>
+              <Card className="glass p-4 sm:p-6 shadow-premium border border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                  <Smile className="text-primary" size={24} />
+                  <span className="text-3xl sm:text-4xl font-bold text-primary">{moodHistory.length}</span>
+                </div>
+                <h3 className="font-semibold text-foreground">Ruh Hali</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">Kayıtlı ruh hali girişi</p>
+              </Card>
+            </div>
           </div>
         )}
       </div>
