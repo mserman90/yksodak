@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -28,7 +31,8 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  LogOut
 } from "lucide-react";
 import { UserGuide } from "@/components/UserGuide";
 
@@ -63,10 +67,40 @@ interface MoodEntry {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("pomodoro");
   const [darkMode, setDarkMode] = useState(false);
   const [points, setPoints] = useState(0);
   const { toast } = useToast();
+
+  // Auth check
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+        
+        if (!session?.user) {
+          navigate("/auth");
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+      
+      if (!session?.user) {
+        navigate("/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   // Pomodoro state
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -455,6 +489,26 @@ const Index = () => {
     return Math.max(max, streak);
   }, 0);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen gradient-bg flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen gradient-bg">
       {/* Navigation */}
@@ -484,6 +538,15 @@ const Index = () => {
                 className="rounded-full h-8 w-8 sm:h-10 sm:w-10"
               >
                 {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="rounded-full h-8 w-8 sm:h-10 sm:w-10"
+                title="Çıkış Yap"
+              >
+                <LogOut size={18} />
               </Button>
             </div>
           </div>
