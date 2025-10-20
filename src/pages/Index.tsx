@@ -30,6 +30,7 @@ import {
   ChevronRight,
   X
 } from "lucide-react";
+import { UserGuide } from "@/components/UserGuide";
 
 type Tab = "pomodoro" | "tasks" | "planner" | "habits" | "mood" | "stats";
 type Priority = "high" | "medium" | "low";
@@ -475,6 +476,7 @@ const Index = () => {
                 <Star className="text-amber-500 fill-amber-500" size={16} />
                 <span className="font-bold text-primary text-sm sm:text-base bounce-gentle">{points}</span>
               </div>
+              <UserGuide />
               <Button
                 variant="ghost"
                 size="icon"
