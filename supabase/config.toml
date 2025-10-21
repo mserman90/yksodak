@@ -1,1 +1,8 @@
 project_id = "ibpkgxdgdlhduvfcogei"
+
+[auth.hook.send_email]
+enabled = true
+uri = "https://ibpkgxdgdlhduvfcogei.supabase.co/functions/v1/send-password-reset"
+
+[functions.send-password-reset]
+verify_jwt = false
