@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  LogOut
+  LogOut,
+  Gamepad2
 } from "lucide-react";
 import { UserGuide } from "@/components/UserGuide";
 
@@ -759,6 +760,16 @@ const Index = () => {
                 <Star className="text-amber-500 fill-amber-500" size={16} />
                 <span className="font-bold text-primary text-sm sm:text-base bounce-gentle">{userStats.points}</span>
               </div>
+              <Link to="/yks-quest">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="hidden sm:flex items-center gap-2"
+                >
+                  <Gamepad2 size={18} />
+                  YKS Quest
+                </Button>
+              </Link>
               <UserGuide />
               <Button
                 variant="ghost"
