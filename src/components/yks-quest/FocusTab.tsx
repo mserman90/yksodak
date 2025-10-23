@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { GameState } from '@/types/yks-quest';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 import { useRewardPopup } from './RewardPopup';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface FocusTabProps {
   gameState: GameState;
@@ -16,6 +17,7 @@ export const FocusTab = ({ gameState, updateGameState }: FocusTabProps) => {
   const [workDuration, setWorkDuration] = useState(25);
   const [breakDuration, setBreakDuration] = useState(5);
   const { open } = useRewardPopup();
+  const { sendNotification } = useNotifications();
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -50,14 +52,26 @@ export const FocusTab = ({ gameState, updateGameState }: FocusTabProps) => {
         totalXP: prev.totalXP + 25,
       }));
       
+      sendNotification('🎯 Odaklanma Tamamlandı!', 'Harika çalışma! +25 XP kazandın. Şimdi mola zamanı!');
       open('🎯', 'Odaklanma Tamamlandı!', 'Harika çalışma! +25 XP kazandın. Şimdi mola zamanı!');
       setIsWorkMode(false);
       setTimerSeconds(breakDuration * 60);
     } else {
+      sendNotification('☕ Mola Bitti!', 'Molan bitti! Çalışmaya geri dönmeye hazır mısın?');
       open('☕', 'Mola Bitti!', 'Molan bitti! Çalışmaya geri dönmeye hazır mısın?');
       setIsWorkMode(true);
       setTimerSeconds(workDuration * 60);
     }
+  };
+
+  const handleStartTimer = () => {
+    if (!timerRunning) {
+      sendNotification(
+        '🎯 Pomodoro Başladı',
+        `${workDuration} dakikalık odaklanma seansın başladı! Başarılar!`
+      );
+    }
+    setTimerRunning(true);
   };
 
   const formatTime = (seconds: number) => {
@@ -81,7 +95,7 @@ export const FocusTab = ({ gameState, updateGameState }: FocusTabProps) => {
         <div className="flex justify-center gap-4 mb-6">
           {!timerRunning ? (
             <button
-              onClick={() => setTimerRunning(true)}
+              onClick={handleStartTimer}
               className="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl font-semibold transition flex items-center gap-2"
             >
               <Play className="w-5 h-5" /> Başlat
