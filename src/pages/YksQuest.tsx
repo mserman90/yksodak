@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Trophy, Calendar, Brain, CheckCircle, BookOpen, BarChart3, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Trophy, Calendar, Brain, CheckCircle, BookOpen, BarChart3, HelpCircle, Download } from 'lucide-react';
 import { TopBar } from '@/components/yks-quest/TopBar';
 import { QuestsTab } from '@/components/yks-quest/QuestsTab';
 import { CharacterTab } from '@/components/yks-quest/CharacterTab';
@@ -37,13 +37,21 @@ const YksQuest = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Back Button */}
-      <div className="container mx-auto px-4 pt-4">
+      <div className="container mx-auto px-4 pt-4 flex justify-between items-center">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
           Ana Sayfaya Dön
+        </Link>
+        
+        <Link
+          to="/install"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition font-semibold"
+        >
+          <Download className="w-5 h-5" />
+          Telefonuna Yükle
         </Link>
       </div>
 
