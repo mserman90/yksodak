@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, GraduationCap } from "lucide-react";
+import { Loader2, GraduationCap, UserX } from "lucide-react";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Geçerli bir email adresi giriniz");
@@ -29,6 +30,7 @@ const Auth = () => {
   const [showPasswordUpdate, setShowPasswordUpdate] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showAnonymousWarning, setShowAnonymousWarning] = useState(false);
 
   // Redirect if already logged in or handle password recovery
   useEffect(() => {
@@ -237,6 +239,26 @@ const Auth = () => {
     }
   };
 
+  const handleAnonymousSignIn = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInAnonymously();
+    setLoading(false);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Misafir olarak giriş yaptınız",
+        description: "Verileriniz cihazınızda geçici olarak saklanacak.",
+      });
+      navigate("/");
+    }
+  };
+
   // Show password update form when recovery link is clicked
   if (showPasswordUpdate) {
     return (
@@ -310,7 +332,7 @@ const Auth = () => {
             </div>
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            YKS Quest
+            YKS Odak
           </h1>
           <p className="text-muted-foreground">
             YKS'ye hazırlanırken oyunlaştırma ile motivasyonunu artır! 
@@ -428,8 +450,58 @@ const Auth = () => {
                 </form>
               </TabsContent>
             </Tabs>
+
+            <div className="mt-6 pt-6 border-t">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowAnonymousWarning(true)}
+                disabled={loading}
+              >
+                <UserX className="mr-2 h-4 w-4" />
+                Misafir Olarak Devam Et
+              </Button>
+            </div>
           </CardContent>
         </Card>
+
+        <AlertDialog open={showAnonymousWarning} onOpenChange={setShowAnonymousWarning}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <UserX className="h-5 w-5 text-destructive" />
+                Misafir Girişi Uyarısı
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3 text-left">
+                <p className="font-semibold text-foreground">
+                  Misafir olarak giriş yapmak istediğinizden emin misiniz?
+                </p>
+                <div className="space-y-2">
+                  <p className="text-destructive font-medium">⚠️ Dezavantajlar:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>Verileriniz kalıcı olarak <strong>kaydedilmeyecektir</strong></li>
+                    <li>Tarayıcı geçmişi silindiğinde tüm ilerlemeniz <strong>kaybolacaktır</strong></li>
+                    <li>Farklı bir cihazdan giriş yaptığınızda verilerinize <strong>ulaşamazsınız</strong></li>
+                    <li>Başarımlar, seviye ve istatistikleriniz <strong>silinebilir</strong></li>
+                    <li>Yedekleme ve geri yükleme yapma imkanınız <strong>olmayacaktır</strong></li>
+                  </ul>
+                </div>
+                <p className="text-sm mt-4">
+                  <strong>Önerimiz:</strong> Verilerinizi güvende tutmak için üye olarak giriş yapmanızı tavsiye ederiz.
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>İptal</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleAnonymousSignIn}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Yine de Devam Et
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
