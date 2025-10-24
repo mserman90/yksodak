@@ -81,8 +81,8 @@ export const FocusTab = ({ gameState, updateGameState }: FocusTabProps) => {
   };
 
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      <Card className="p-8">
+    <div className="flex justify-center">
+      <Card className="p-8 w-full max-w-xl">
         <h3 className="text-2xl font-bold mb-6 text-center">⏱️ Odaklanma Zamanlayıcı</h3>
         <div className="text-center mb-8">
           <div className="text-7xl font-bold text-purple-600 dark:text-purple-400 mb-4">
@@ -140,37 +140,6 @@ export const FocusTab = ({ gameState, updateGameState }: FocusTabProps) => {
               max="30"
               className="w-full px-4 py-2 rounded-lg border-2 dark:bg-gray-700"
             />
-          </div>
-        </div>
-      </Card>
-
-      <Card className="p-6">
-        <h3 className="text-xl font-bold mb-4">📊 Odaklanma İstatistikleri</h3>
-        <div className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold">Bugün</span>
-              <span className="text-2xl font-bold text-blue-600">{gameState.focusSessions.today}</span>
-            </div>
-            <div className="text-sm text-muted-foreground">Tamamlanan Seans</div>
-          </div>
-
-          <div className="bg-green-50 dark:bg-green-900 p-4 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold">Bu Hafta</span>
-              <span className="text-2xl font-bold text-green-600">{gameState.focusSessions.week}</span>
-            </div>
-            <div className="text-sm text-muted-foreground">Tamamlanan Seans</div>
-          </div>
-
-          <div className="bg-purple-50 dark:bg-purple-900 p-4 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold">Toplam Süre</span>
-              <span className="text-xl font-bold text-purple-600">
-                {Math.floor(gameState.focusSessions.totalMinutes / 60)}h {gameState.focusSessions.totalMinutes % 60}m
-              </span>
-            </div>
-            <div className="text-sm text-muted-foreground">Odaklanma Süresi</div>
           </div>
         </div>
       </Card>
