@@ -26,25 +26,30 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [resetEmail, setResetEmail] = useState("");
+  const [showPasswordUpdate, setShowPasswordUpdate] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Redirect if already logged in
+  // Redirect if already logged in or handle password recovery
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (session?.user) {
+        if (event === "PASSWORD_RECOVERY") {
+          setShowPasswordUpdate(true);
+        } else if (session?.user && !showPasswordUpdate) {
           navigate("/");
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+      if (session?.user && !showPasswordUpdate) {
         navigate("/");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, showPasswordUpdate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +166,7 @@ const Auth = () => {
 
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
-      redirectTo: `${window.location.origin}/`,
+      redirectTo: `${window.location.origin}/auth`,
     });
 
     setLoading(false);
@@ -180,6 +185,120 @@ const Auth = () => {
       setResetEmail("");
     }
   };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    if (newPassword !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Şifreler eşleşmiyor.",
+      });
+      return;
+    }
+
+    try {
+      passwordSchema.parse(newPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          variant: "destructive",
+          title: "Hata",
+          description: error.errors[0].message,
+        });
+        return;
+      }
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Başarılı!",
+        description: "Şifreniz başarıyla güncellendi.",
+      });
+      setShowPasswordUpdate(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      navigate("/");
+    }
+  };
+
+  // Show password update form when recovery link is clicked
+  if (showPasswordUpdate) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-2">
+            <div className="flex justify-center mb-4">
+              <div className="glass p-4 rounded-2xl">
+                <GraduationCap className="w-12 h-12 text-primary" />
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Yeni Şifre Belirle
+            </h1>
+          </div>
+
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle>Şifre Gereksinimleri</CardTitle>
+              <CardDescription className="space-y-1">
+                <p>✓ En az 8 karakter</p>
+                <p>✓ En az bir büyük harf (A-Z)</p>
+                <p>✓ En az bir küçük harf (a-z)</p>
+                <p>✓ En az bir rakam (0-9)</p>
+                <p>✓ En az bir özel karakter (!@#$%...)</p>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Yeni Şifre</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Yeni Şifre (Tekrar)</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Şifreyi Güncelle
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
