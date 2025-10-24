@@ -20,9 +20,9 @@ const App = () => (
       <PWAInstallPrompt />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<YksQuest />} />
+          <Route path="/welcome" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/yks-quest" element={<YksQuest />} />
           <Route path="/install" element={<Install />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
