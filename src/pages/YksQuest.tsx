@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ArrowLeft, Trophy, Calendar, Brain, CheckCircle, BookOpen, BarChart3, HelpCircle, Download } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { TopBar } from '@/components/yks-quest/TopBar';
 import { QuestsTab } from '@/components/yks-quest/QuestsTab';
 import { CharacterTab } from '@/components/yks-quest/CharacterTab';
@@ -16,46 +15,12 @@ import { RewardPopup } from '@/components/yks-quest/RewardPopup';
 import { useGameState } from '@/hooks/useGameState';
 
 const YksQuest = () => {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('quests');
   const { gameState, updateGameState } = useGameState();
-  const [loading, setLoading] = useState(true);
-
-  // Authentication check
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setLoading(false);
-        if (!session?.user) {
-          navigate('/auth');
-        }
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setLoading(false);
-      if (!session?.user) {
-        navigate('/auth');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
 
   useEffect(() => {
     document.title = 'YKS Quest - DEHB Oyunlaştırma Sistemi';
   }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Yükleniyor...</p>
-        </div>
-      </div>
-    );
-  }
 
   const tabs = [
     { id: 'quests', label: 'Görevler', icon: BookOpen },
@@ -71,8 +36,16 @@ const YksQuest = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Install Button */}
-      <div className="container mx-auto px-4 pt-4 flex justify-end items-center">
+      {/* Back Button */}
+      <div className="container mx-auto px-4 pt-4 flex justify-between items-center">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Ana Sayfaya Dön
+        </Link>
+        
         <Link
           to="/install"
           className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition font-semibold"
