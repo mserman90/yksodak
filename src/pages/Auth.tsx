@@ -310,11 +310,11 @@ const Auth = () => {
             </div>
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            YKS Odak
+            YKS Quest
           </h1>
           <p className="text-muted-foreground">
-            YKS'ye hazırlanırken odaklanmanı ve verimini artırmak için tasarlandı. 
-            Pomodoro tekniği, görev yönetimi, alışkanlık takibi ve daha fazlasıyla 
+            YKS'ye hazırlanırken oyunlaştırma ile motivasyonunu artır! 
+            Görevler, başarımlar, karakter gelişimi ve daha fazlasıyla 
             başarıya giden yolda yanındayız! 🎯
           </p>
         </div>
