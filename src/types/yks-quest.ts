@@ -54,29 +54,6 @@ export interface FocusSessions {
   totalMinutes: number;
 }
 
-export interface SubjectPerformance {
-  name: string;
-  correct: number;
-  wrong: number;
-  empty: number;
-  successRate: number;
-}
-
-export interface StudyTimeLog {
-  hour: number;
-  productivity: number;
-  date: string;
-}
-
-export interface ExamResult {
-  date: string;
-  totalNet: number;
-  subjects: {
-    name: string;
-    net: number;
-  }[];
-}
-
 export interface Stats {
   discipline: number;
   focus: number;
@@ -109,7 +86,4 @@ export interface GameState {
   };
   xpHistory: { date: string; xp: number }[];
   journalEntries: JournalEntry[];
-  subjectPerformances: SubjectPerformance[];
-  studyTimeLogs: StudyTimeLog[];
-  examResults: ExamResult[];
 }

@@ -11,7 +11,6 @@ import { HabitsTab } from '@/components/yks-quest/HabitsTab';
 import { JournalTab } from '@/components/yks-quest/JournalTab';
 import { StatsTab } from '@/components/yks-quest/StatsTab';
 import { HelpTab } from '@/components/yks-quest/HelpTab';
-import { PersonalizedPlanTab } from '@/components/yks-quest/PersonalizedPlanTab';
 import { RewardPopup } from '@/components/yks-quest/RewardPopup';
 import { useGameState } from '@/hooks/useGameState';
 
@@ -26,7 +25,6 @@ const YksQuest = () => {
   const tabs = [
     { id: 'quests', label: 'Görevler', icon: BookOpen },
     { id: 'character', label: 'Karakterim', icon: Trophy },
-    { id: 'personalized', label: '⭐ Kişisel Plan', icon: Brain },
     { id: 'planner', label: 'Planlayıcı', icon: Calendar },
     { id: 'achievements', label: 'Başarımlar', icon: Trophy },
     { id: 'focus', label: 'Odaklanma', icon: Brain },
@@ -84,7 +82,6 @@ const YksQuest = () => {
         {/* Tab Content */}
         {activeTab === 'quests' && <QuestsTab gameState={gameState} updateGameState={updateGameState} />}
         {activeTab === 'character' && <CharacterTab gameState={gameState} updateGameState={updateGameState} />}
-        {activeTab === 'personalized' && <PersonalizedPlanTab gameState={gameState} updateGameState={updateGameState} />}
         {activeTab === 'planner' && <PlannerTab gameState={gameState} updateGameState={updateGameState} />}
         {activeTab === 'achievements' && <AchievementsTab gameState={gameState} updateGameState={updateGameState} />}
         {activeTab === 'focus' && <FocusTab gameState={gameState} updateGameState={updateGameState} />}
