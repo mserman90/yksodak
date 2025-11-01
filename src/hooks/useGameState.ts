@@ -27,6 +27,9 @@ const defaultGameState: GameState = {
   },
   xpHistory: [],
   journalEntries: [],
+  subjectPerformances: [],
+  studyTimeLogs: [],
+  examResults: [],
 };
 
 export const useGameState = () => {
