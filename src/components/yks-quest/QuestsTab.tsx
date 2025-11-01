@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import { GameState, Quest } from '@/types/yks-quest';
 import { Card } from '@/components/ui/card';
 import { useRewardPopup } from './RewardPopup';
+import { calculateLevel, checkAchievements } from '@/lib/achievement-checker';
 
 interface QuestsTabProps {
   gameState: GameState;
@@ -15,24 +16,69 @@ export const QuestsTab = ({ gameState, updateGameState }: QuestsTabProps) => {
     const quest = gameState.quests[type][index];
     if (quest.completed) return;
 
+    const oldLevel = gameState.level;
+
     updateGameState((prev) => {
       const newQuests = { ...prev.quests };
       newQuests[type] = [...newQuests[type]];
       newQuests[type][index] = { ...newQuests[type][index], completed: true };
 
-      const newXP = prev.currentXP + quest.xp;
       const newTotalXP = prev.totalXP + quest.xp;
+      const newLevel = calculateLevel(newTotalXP);
+      const newCurrentXP = newTotalXP % 100;
+
+      // Başarımları kontrol et
+      const unlockedAchievements = checkAchievements({
+        ...prev,
+        totalXP: newTotalXP,
+        level: newLevel,
+        completedQuests: prev.completedQuests + 1,
+        quests: newQuests,
+      });
+
+      // Başarımları güncelle
+      const updatedAchievements = prev.achievements.map((achievement) => {
+        const unlocked = unlockedAchievements.find((a) => a.id === achievement.id);
+        return unlocked ? { ...achievement, unlocked: true } : achievement;
+      });
 
       return {
         ...prev,
         quests: newQuests,
-        currentXP: newXP,
+        currentXP: newCurrentXP,
         totalXP: newTotalXP,
+        level: newLevel,
         completedQuests: prev.completedQuests + 1,
+        achievements: updatedAchievements,
+        skillPoints: prev.skillPoints + (newLevel > prev.level ? 1 : 0),
       };
     });
 
+    // Görev tamamlama popup'ı
     open('🎊', 'Görev Tamamlandı!', `"${quest.name}" görevini tamamladın! +${quest.xp} XP kazandın!`);
+
+    // Seviye atlama kontrolü
+    setTimeout(() => {
+      const newLevel = calculateLevel(gameState.totalXP + quest.xp);
+      if (newLevel > oldLevel) {
+        open('🎉', 'Seviye Atladın!', `Tebrikler! Seviye ${newLevel}'e ulaştın! +1 Yetenek Puanı kazandın!`);
+      }
+    }, 1500);
+
+    // Başarım kontrolü
+    setTimeout(() => {
+      const unlockedAchievements = checkAchievements({
+        ...gameState,
+        totalXP: gameState.totalXP + quest.xp,
+        level: calculateLevel(gameState.totalXP + quest.xp),
+        completedQuests: gameState.completedQuests + 1,
+      });
+
+      if (unlockedAchievements.length > 0) {
+        const achievement = unlockedAchievements[0];
+        open('🏆', 'Başarım Kazandın!', `"${achievement.name}" başarımını açtın! ${achievement.description}`);
+      }
+    }, 3000);
   };
 
   const renderQuest = (quest: Quest, index: number, type: 'daily' | 'weekly' | 'special') => (

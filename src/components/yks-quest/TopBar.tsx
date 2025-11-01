@@ -1,14 +1,15 @@
 import { Brain, Flame } from 'lucide-react';
 import { GameState } from '@/types/yks-quest';
+import { getXPForNextLevel, getCurrentLevelXP } from '@/lib/achievement-checker';
 
 interface TopBarProps {
   gameState: GameState;
 }
 
 export const TopBar = ({ gameState }: TopBarProps) => {
-  const getRequiredXP = (level: number) => Math.floor(100 * Math.pow(1.5, level - 1));
-  const requiredXP = getRequiredXP(gameState.level);
-  const xpPercent = Math.min((gameState.currentXP / requiredXP) * 100, 100);
+  const requiredXP = getXPForNextLevel(gameState.level);
+  const currentLevelXP = getCurrentLevelXP(gameState.totalXP, gameState.level);
+  const xpPercent = Math.min((currentLevelXP / requiredXP) * 100, 100);
 
   return (
     <div className="bg-card shadow-lg sticky top-0 z-50">
@@ -36,7 +37,7 @@ export const TopBar = ({ gameState }: TopBarProps) => {
           <div className="flex-1 max-w-md">
             <div className="flex justify-between text-sm mb-1">
               <span className="font-semibold">
-                XP: {gameState.currentXP} / {requiredXP}
+                XP: {currentLevelXP} / {requiredXP}
               </span>
               <span className="text-purple-600 dark:text-purple-400 font-semibold">
                 Toplam: {gameState.totalXP} XP

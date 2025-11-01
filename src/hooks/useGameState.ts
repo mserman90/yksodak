@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GameState } from '@/types/yks-quest';
 import { questTemplates, achievementTemplates } from '@/lib/yks-quest-templates';
+import { calculateLevel } from '@/lib/achievement-checker';
 
 const defaultGameState: GameState = {
   level: 1,
@@ -47,6 +48,10 @@ export const useGameState = () => {
             parsed[key] = JSON.parse(JSON.stringify(defaultGameState[key as keyof GameState]));
           }
         });
+        
+        // Seviyeyi totalXP'den yeniden hesapla
+        parsed.level = calculateLevel(parsed.totalXP);
+        
         setGameState(parsed);
       } else {
         const newState = {

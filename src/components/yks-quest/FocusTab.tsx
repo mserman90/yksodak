@@ -4,6 +4,7 @@ import { GameState } from '@/types/yks-quest';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 import { useRewardPopup } from './RewardPopup';
 import { useNotifications } from '@/hooks/useNotifications';
+import { checkAchievements, calculateLevel } from '@/lib/achievement-checker';
 
 interface FocusTabProps {
   gameState: GameState;
@@ -39,21 +40,71 @@ export const FocusTab = ({ gameState, updateGameState }: FocusTabProps) => {
     setTimerRunning(false);
     
     if (isWorkMode) {
-      updateGameState((prev) => ({
-        ...prev,
-        focusSessions: {
+      const oldLevel = gameState.level;
+      const newTotalXP = gameState.totalXP + 25;
+      const newLevel = calculateLevel(newTotalXP);
+      
+      updateGameState((prev) => {
+        const updatedFocusSessions = {
           ...prev.focusSessions,
           today: prev.focusSessions.today + 1,
           week: prev.focusSessions.week + 1,
           total: prev.focusSessions.total + 1,
           totalMinutes: prev.focusSessions.totalMinutes + workDuration,
-        },
-        currentXP: prev.currentXP + 25,
-        totalXP: prev.totalXP + 25,
-      }));
+        };
+
+        // Başarımları kontrol et
+        const unlockedAchievements = checkAchievements({
+          ...prev,
+          focusSessions: updatedFocusSessions,
+          totalXP: newTotalXP,
+          level: newLevel,
+        });
+
+        const updatedAchievements = prev.achievements.map((achievement) => {
+          const unlocked = unlockedAchievements.find((a) => a.id === achievement.id);
+          return unlocked ? { ...achievement, unlocked: true } : achievement;
+        });
+
+        return {
+          ...prev,
+          focusSessions: updatedFocusSessions,
+          currentXP: newTotalXP % 100,
+          totalXP: newTotalXP,
+          level: newLevel,
+          achievements: updatedAchievements,
+          skillPoints: prev.skillPoints + (newLevel > prev.level ? 1 : 0),
+        };
+      });
       
       sendNotification('🎯 Odaklanma Tamamlandı!', 'Harika çalışma! +25 XP kazandın. Şimdi mola zamanı!');
       open('🎯', 'Odaklanma Tamamlandı!', 'Harika çalışma! +25 XP kazandın. Şimdi mola zamanı!');
+      
+      // Seviye atlama kontrolü
+      if (newLevel > oldLevel) {
+        setTimeout(() => {
+          open('🎉', 'Seviye Atladın!', `Tebrikler! Seviye ${newLevel}'e ulaştın! +1 Yetenek Puanı kazandın!`);
+        }, 1500);
+      }
+
+      // Başarım kontrolü
+      setTimeout(() => {
+        const unlockedAchievements = checkAchievements({
+          ...gameState,
+          focusSessions: {
+            ...gameState.focusSessions,
+            total: gameState.focusSessions.total + 1,
+          },
+          totalXP: newTotalXP,
+          level: newLevel,
+        });
+
+        if (unlockedAchievements.length > 0) {
+          const achievement = unlockedAchievements[0];
+          open('🏆', 'Başarım Kazandın!', `"${achievement.name}" başarımını açtın! ${achievement.description}`);
+        }
+      }, 3000);
+      
       setIsWorkMode(false);
       setTimerSeconds(breakDuration * 60);
     } else {
